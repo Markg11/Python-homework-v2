@@ -1,0 +1,101 @@
+"""This script installs the required packages and works with URL's"""
+
+#The email function doesn't want to work for some reason
+#I've tried many methods/looked everywhere but I couldn't find a solution to the problem
+#I have kept the code commented to not have errors
+
+
+
+#!pip install beautifulsoup4
+
+#!pip install requests
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from bs4 import BeautifulSoup
+import configparser
+import requests
+!pip freeze > requirements.txt
+
+
+# Sender's email address and password
+sender_email = 't69373271@gmail.com'
+sender_password = 'parolaparola'
+
+# Recipient's email address
+recipient_email = "gergely.mark10@yahoo.com"
+
+
+
+# Making the config file ini
+config = configparser.ConfigParser()
+config['Price checker'] = {'URL': 'https://www.olx.ro',
+                           'KEY': 'iphone 15 pro',
+                           'value X': 1250}
+with open('URL_list.ini', 'w') as configfile:
+  config.write(configfile)
+config.read('URL_list.ini')
+
+# Making the function to extract the title and the meta data from the given URL
+def Get_URL_Data(UserInput):
+  x=requests.get(UserInput)
+  soup=BeautifulSoup(x.text,'html.parser')
+
+  if soup.title:
+    URL_title=soup.title.string
+    print("Page Title:", URL_title)
+  else:
+    print("No title found.")
+
+  meta_description = soup.find('meta', attrs={'name': 'description'})
+  page_description = meta_description['content'] if meta_description and 'content' in meta_description.attrs else "No description found"
+
+  print("Page Description:", page_description)
+
+def Get_URL_Price():
+  # Making the necessary url to get to https://www.olx.ro/electronice-si-electrocasnice/telefoane-mobile/q-iphone-15-pro
+  s=config['Price checker']['KEY']
+  s=s.replace(' ','-')
+  s=config['Price checker']['URL']+'/electronice-si-electrocasnice/telefoane-mobile/q-'+s
+  x=requests.get(s)
+  soup=BeautifulSoup(x.text,'html.parser')
+
+  #getting the info from the webpage
+  listings=[]
+  for listing in soup.find_all("div","css-u2ayx9"):
+    title=listing.find('h6',"css-16v5mdi er34gjf0")
+    price=listing.find('p',"css-10b0gli er34gjf0")
+    if price.find('Schimb')!=-1:
+      listings.append({'title': title.text.strip(),'price':price.text.strip("SchimbLeiPrețul e negociabil")})
+  #sorting the list and deleting the first entry (for some reason it wasn't' getting picked up
+  #by the Schimb if and it wasn't deleting it at the moment of making this project)
+  listings.sort(key=lambda x: x['price'])
+  listings.pop(0)
+
+  #formatting the price to a float and comparing it to the threshold X
+  for listing in listings:
+    listing['price']=float(listing['price'].replace(' ','').replace(',','.'))
+  for listing in listings :
+    if listing['price'] < float(config['Price checker']['value X']):
+    #   #formatting the message
+    #   message = MIMEMultipart()
+    #   message['From'] = sender_email
+    #   message['To'] = recipient_email
+    #   message['Subject'] = "SALE!"
+    #   body = "The price for an Iphone 15 pro listing just dropped under the threshold!"
+    #   message.attach(MIMEText(body, 'plain'))
+
+        #connect to the server
+    #   with smtplib.SMTP('smtp.gmail.com', 587) as server:
+    #     server.starttls()  # Start TLS for security
+    #     server.login(sender_email, sender_password)
+    # # Send the email
+    #     server.sendmail(sender_email, recipient_email, message.as_string())
+      print("There should be a sent email here!")
+  print(*listings, sep="\n")
+ 
+if __name__=="__main__":
+  Get_URL_Data(config['Price checker']['URL'])
+Get_URL_Price()
